@@ -1,8 +1,7 @@
 **NAS - Network Attached Storage**
 
-NAS steht für Network Attached Storage und bezeichbezeichnet ein Datenspeichersystem, das über ein Netzwerk für mehrere Clients 
-gleichzeitig zugänglich ist. Im Gegensatz zu einem direkt an einen Rechner angeschlossenen Speicher (Direct Attached Storage, kurz DAS) 
-hängt ein NAS-Gerät eigenständig im Netzwerk und stellt seinen Speicher als gemeinsame Ressource bereit.
+NAS steht für Network Attached Storage und bezeichnet ein Datenspeichersystem, das über ein Netzwerk für mehrere Clients 
+gleichzeitig zugänglich ist. Ein NAS-Gerät hängt eigenständig im Netzwerk und stellt seinen Speicher als gemeinsame Ressource bereit.
 
 Ein NAS-System ist im Wesentlichen ein kleiner, spezialisierter Rechner: Es verfügt über einen Prozessor, Arbeitsspeicher, ein eigenes 
 Betriebssystem und mehrere Festplatteneinschübe. Es bietet keine vollwertige Desktop-Umgebung, sondern ist darauf ausgelegt, Dateien zentral 
@@ -10,7 +9,7 @@ zu speichern, zu verwalten und über das Netzwerk bereitzustellen.
 
 **Einsatzgebiete NAS**
 -Kleine Unternehmen -> Gemeinsamer Dateizugriff, einfaches Back-Up
--Rechenzentrum -> Skalierbare Dateiserver Archivierung, Visualisierung
+-Rechenzentrum -> Skalierbare Dateiserver Archivierung, Virtualisierung
 -Privatverwendung -> Heimnetzwerke Bibliotheken (Fotos, Musik usw.) , automatische Backups
 -Bildung/Forschung -> Gemeinsamer Projektspeicher, Datenaustausch zwischen Abteilungen
 
@@ -21,12 +20,16 @@ NAS ablegen, was Live-Migration zwischen Hosts, zentrale Backups und einfache Sk
 Clients greifen nicht blockweise auf den Speicher zu (wie bei SAN), sondern auf Dateiebene. Das NAS stellt Verzeichnisse und Dateien über 
 standardisierte **Netzwerkprotokolle** bereit, die vom Client gemountet werden können.
 
-**Aufbau**
+**Aufbau** 
+![Darstellung Aufbau](../../assets/NAS_Grafik.png)
 Ein NAS besteht typischerweise aus Prozessor (CPU), Arbeitsspeicher (RAM), einem oder mehreren Festplatteneinschüben,
 Netzwerkanschluss (Ethernet, oft 1–10 Gbit/s) und einem Betriebssystem (z. B. Synology DSM oder QNAP QTS).
 
 Das NAS-Betriebssystem verwaltet die Festplatten, üblicherweise in einem RAID-Verbund (Redundant Array of Independent Disks), um 
-Datensicherheit und/oder Performance zu gewährleisten:
+Datensicherheit und/oder Performance zu gewährleisten. RAID dient hauptsächlich der Verfügbarkeit und Ausfallsicherheit eines Systems. 
+Fällt beispielsweise eine Festplatte aus, können die Daten durch die Redundanz weiterhin verfügbar bleiben. RAID schützt jedoch nicht 
+vor versehentlichem Löschen von Dateien, Schadsoftware, Ransomware oder Hardwarefehlern des gesamten Systems. Die genauen Funktionen und
+Vorteile unterscheiden sich jeweils durch die Art des RAID:
 
 -RAID 0: Striping – höhere Speed, kein Schutz, Mind. 2 Laufwerke - nicht redundant
 -RAID 1: Mirroring – Spiegelung auf zwei Platten, Mind. 2 Laufwerke - redundant
@@ -34,15 +37,15 @@ Datensicherheit und/oder Performance zu gewährleisten:
 -RAID 6: Wie RAID 5, aber 2 Platten Verlust tolerierbar, Mind. 4 Laufwerke - redundant
 -RAID 10: Kombination aus Striping und Mirroring,  Mind. 4 Laufwerke - redundant
 
-**Protkolle**
-Um Festzulegen wie Gerät emit dem SPeicher reden, werden je nach Client verschiedene Protokolle benötigt
--SMB/CIFS Server Message Block -> Windows - Weit verbreitet, auch unter Linux/macOS nutzbar
--NFS Network File System -> Linux/Unix - Standard in Unix-Umgebungen, effizient im LAN
--AFP Apple Filing Protocol -> macOS (veraltet), Wurde durch SMB abgelöst
--FTP/SFTP File Transfer Protocol -> Plattformübergreifend - Dateiübertragung, auch über das Internet
--iSCSI Internet Small Computer Systems Interface -> Virtualisierung - Blockbasiert – NAS verhält sich wie lokale Festplatte -> iSCSI ist 
+**Protokolle**
+Um Festzulegen wie Gerät mit dem Speicher kommunizieren, werden je nach Client verschiedene Protokolle benötigt. z.B.:
+-SMB/CIFS (Server Message Block) -> Windows - Weit verbreitet, auch unter Linux/macOS nutzbar
+-NFS (Network File System) -> Linux/Unix - Standard in Unix-Umgebungen, effizient im LAN
+-AFP (Apple Filing Protocol) -> macOS (veraltet), Wurde durch SMB abgelöst
+-FTP/SFTP (File Transfer Protocol) -> Plattformübergreifend - Dateiübertragung, auch über das Internet
+-iSCSI (Internet Small Computer Systems Interface) -> Virtualisierung - Blockbasiert – NAS verhält sich wie lokale Festplatte -> iSCSI ist 
 streng genommen ein SAN-Protokoll, wird aber von vielen NAS-Geräten unterstützt und ermöglicht die Nutzung als Block-Speicher für Hypervisoren.
--WebDAV Web Distributed Authoring and Versioning -> Plattformübergreifend - HTTP-basierter Dateizugriff, auch remote
+-WebDAV (Web Distributed Authoring and Versioning) -> Plattformübergreifend - HTTP-basierter Dateizugriff, auch remote
 
 **Praxisbeispiele**
 -Ein 10-köpfiges Entwicklungsteam nutzt ein QNAP-NAS mit 6 Festplatten in RAID 6. Über NFS-Freigaben greifen Linux-Entwicklerrechner auf 
@@ -51,6 +54,27 @@ rsync (3-2-1-Backup-Strategie).
 
 -Ein Privathaushalt betreibt ein Synology DS223-NAS mit zwei 4-TB-Festplatten im RAID 1. Alle Laptops im Heimnetzwerk mounten eine 
 SMB-Freigabe als Netzlaufwerk. Fotos und Videos werden automatisch auf das NAS gesichert.
+
+**Abgrenzung zu DAS und SAN**
+-DAS (Direct Attached Storage): Speicher wird direkt an einen einzelnen Rechner angeschlossen, beispielsweise über USB oder SATA.
+-NAS (Network Attached Storage): Dateibasierter Speicherzugriff über ein Netzwerk.
+-SAN (Storage Area Network): Blockbasierter Speicher für Server und Virtualisierungsumgebungen mit hoher Performance.
+
+**Pro und Cons**
+Vorteile:
+-Zentrale Speicherung von Dateien für mehrere Benutzer
+-Einfacher Zugriff von unterschiedlichen Geräten (PC, Smartphone, Tablet)
+-Automatische Datensicherung möglich
+-Benutzer- und Rechteverwaltung
+-Erweiterbarkeit durch zusätzliche Festplatten
+-Viele NAS-Systeme unterstützen zusätzliche Anwendungen wie Medienserver, Docker-Container oder Cloud-Dienste
+
+Nachteile:
+-Höhere Anschaffungskosten als eine externe Festplatte
+-Benötigt permanente Stromversorgung
+-Leistung hängt stark von Netzwerkgeschwindigkeit ab
+-Fehlerhafte Konfiguration kann Sicherheitsrisiken verursachen
+-Wartung und Updates notwendig
 
 
 **Quellen**
