@@ -1,8 +1,10 @@
 name: "Reinberg Destroy Infrastructure"
-on: workflow_dispatch
+permissions:
+  contents: write
 
+on: workflow_dispatch
 jobs:
-  terraform-destroy:
+  terraform:
     runs-on: ubuntu-latest
 
 # Sagt GitHub Actions, dass alle folgenden 'run' Befehle in diesem Ordner starten sollen
@@ -41,3 +43,14 @@ jobs:
         env:
           EXOSCALE_API_KEY: ${{ secrets.EXOSCALE_API_KEY }}
           EXOSCALE_API_SECRET: ${{ secrets.EXOSCALE_API_SECRET }}
+
+      - name: Commit Terraform state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git status
+          git add terraform.tfstate || true
+
+          git commit -m "Update Terraform state" || echo "No state changes to commit"
+          git push
