@@ -1,34 +1,16 @@
 #cloud-config
 
-# 1. System updaten
-package_update: true
-
-# 2. Pakete installieren
+# 1. Benötigte Pakete installieren
+# nginx als Webserver und curl, um die öffentliche IP abzufragen
 packages:
   - nginx
-  - certbot
-  - python3-certbot-nginx
   - curl
-  - gnupg
-  - ca-certificates
 
-# 3. Unser Bash-Skript zur Generierung des Dashboards erstellen
 write_files:
-  - path: /usr/local/bin/init-dashboard.sh
-    permissions: '0755'
+  # 2. Das HTML/CSS Template speichern
+  # Dieses Template wird später vom Skript mit den echten Daten gefüllt
+  - path: /opt/dashboard_template.html
     content: |
-      #!/bin/bash
-      
-      # Systemdaten sammeln
-      PUBLIC_IP=$(curl -s --max-time 5 http://ifconfig.me || echo "Nicht ermittelbar")
-      MEMORY=$(free -h | awk '/^Mem:/ {print "Gesamt: " $2 " / Genutzt: " $3}')
-      KERNEL=$(uname -srm)
-      HYPERVISOR=$(systemd-detect-virt || echo "Unbekannt")
-      ROOT_STORAGE=$(df -h / | awk 'NR==2 {print "Größe: " $2 " / Frei: " $4 " (" $5 " genutzt)"}')
-      FS_TABLE=$(df -hT -x tmpfs -x devtmpfs | tail -n +2 | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$5"</td><td>"$7"</td></tr>"}')
-
-      # HTML-Datei generieren
-      cat <<EOF > /var/www/html/index.html
       <!DOCTYPE html>
       <html lang="de">
       <head>
@@ -36,27 +18,150 @@ write_files:
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>VM Dashboard</title>
           <style>
-              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px auto; max-width: 900px; background-color: #f4f7f6; color: #333; }
-              h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-              p.subtitle { color: #7f8c8d; font-style: italic; margin-bottom: 30px; }
-              table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-              th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e0e0e0; }
-              th { background-color: #3498db; color: white; text-transform: uppercase; font-size: 0.9em; }
-              tr:hover { background-color: #f5f5f5; }
+              :root {
+                  --bg-color: #121212;
+                  --text-color: #e0e0e0;
+                  --heading-color: #64b5f6;
+                  --table-bg: #1e1e1e;
+                  --table-border: #333333;
+                  --table-header-bg: #1976d2;
+                  --table-header-color: #ffffff;
+                  --hover-bg: #2a2a2a;
+                  --dial-track: #333333;
+                  --dial-fill: #64b5f6;
+              }
+
+              body { 
+                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                  margin: 40px auto; 
+                  max-width: 900px; 
+                  background-color: var(--bg-color); 
+                  color: var(--text-color); 
+              }
+              
+              h1 { 
+                  color: var(--heading-color); 
+                  border-bottom: 2px solid var(--table-header-bg); 
+                  padding-bottom: 10px; 
+                  margin-bottom: 30px;
+              }
+              
+              h2 {
+                  color: var(--text-color);
+                  margin-top: 40px;
+                  font-size: 1.2em;
+              }
+
+              table { 
+                  width: 100%; 
+                  border-collapse: collapse; 
+                  margin-bottom: 30px; 
+                  background: var(--table-bg); 
+                  box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+                  border-radius: 8px;
+                  overflow: hidden; 
+              }
+              th, td { 
+                  padding: 12px 15px; 
+                  text-align: left; 
+                  border-bottom: 1px solid var(--table-border); 
+              }
+              th { 
+                  background-color: var(--table-header-bg); 
+                  color: var(--table-header-color); 
+                  text-transform: uppercase; 
+                  font-size: 0.9em; 
+                  letter-spacing: 0.05em;
+              }
+              tr:last-child td { border-bottom: none; }
+              tr:hover { background-color: var(--hover-bg); }
+
+              /* --- DIAL STYLING --- */
+              .dials-container {
+                  display: flex;
+                  gap: 30px;
+                  margin-bottom: 30px;
+                  justify-content: flex-start;
+              }
+              .dial-wrapper {
+                  background: var(--table-bg);
+                  padding: 20px;
+                  border-radius: 8px;
+                  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                  width: 200px;
+                  text-align: center;
+              }
+              .dial-wrapper h3 {
+                  margin-top: 0;
+                  margin-bottom: 20px;
+                  font-size: 1em;
+                  color: var(--text-color);
+              }
+              .dial {
+                  width: 120px;
+                  height: 120px;
+                  border-radius: 50%;
+                  margin: 0 auto;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+              }
+              .dial-inner {
+                  width: 90px;
+                  height: 90px;
+                  border-radius: 50%;
+                  background-color: var(--table-bg);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+              }
+              .dial-value {
+                  font-size: 1.6em;
+                  font-weight: bold;
+                  color: var(--heading-color);
+              }
+              .dial-label {
+                  font-size: 0.85em;
+                  color: #aaaaaa;
+                  margin-top: 20px;
+                  display: block;
+              }
           </style>
       </head>
       <body>
-          <h1>Server Dashboard</h1>
-          <p class="subtitle">Hello World - Albert was here</p>
+          <h1>Albert's Server Dashboard</h1>          
           
+          <h2>Ressourcen-Auslastung</h2>
+          <div class="dials-container">
+              
+              <div class="dial-wrapper">
+                  <h3>Arbeitsspeicher</h3>
+                  <div class="dial" style="background: conic-gradient(var(--dial-fill) 0% $MEMORY_PERCENT%, var(--dial-track) $MEMORY_PERCENT% 100%);">
+                      <div class="dial-inner">
+                          <span class="dial-value">$MEMORY_PERCENT%</span>
+                      </div>
+                  </div>
+                  <div class="dial-label">$MEMORY</div>
+              </div>
+
+              <div class="dial-wrapper">
+                  <h3>System-Speicher</h3>
+                  <div class="dial" style="background: conic-gradient(var(--dial-fill) 0% $STORAGE_PERCENT%, var(--dial-track) $STORAGE_PERCENT% 100%);">
+                      <div class="dial-inner">
+                          <span class="dial-value">$STORAGE_PERCENT%</span>
+                      </div>
+                  </div>
+                  <div class="dial-label">$ROOT_STORAGE</div>
+              </div>
+
+          </div>
+
           <h2>System Eckdaten</h2>
           <table>
               <tr><th>Eigenschaft</th><th>Wert</th></tr>
               <tr><td>Öffentliche IP</td><td><strong>$PUBLIC_IP</strong></td></tr>
               <tr><td>Kernel & Architektur</td><td>$KERNEL</td></tr>
               <tr><td>Hypervisor</td><td>$HYPERVISOR</td></tr>
-              <tr><td>Arbeitsspeicher (RAM)</td><td>$MEMORY</td></tr>
-              <tr><td>System-Speicher (Root)</td><td>$ROOT_STORAGE</td></tr>
           </table>
           
           <h2>Detaillierte Filesysteme</h2>
@@ -66,12 +171,55 @@ write_files:
           </table>
       </body>
       </html>
-      EOF
 
-# 4. Befehle nach der Installation ausführen
+  # 3. Das Skript zum Generieren der Seite erstellen
+  - path: /usr/local/bin/update-dashboard.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      
+      # Zieldatei im Webserver-Verzeichnis definieren
+      OUTPUT="/var/www/html/index.html"
+      TEMPLATE="/opt/dashboard_template.html"
+
+      # --- DATEN SAMMELN ---
+      PUBLIC_IP=$(curl -s ifconfig.me)
+      KERNEL=$(uname -r -m)
+      HYPERVISOR=$(systemd-detect-virt || echo "Keiner/Unbekannt")
+      
+      # RAM Daten
+      MEMORY_PERCENT=$(free | awk '/Mem:/ {printf("%.0f"), $3/$2 * 100}')
+      MEMORY=$(free -h | awk '/Mem:/ {print $3 " / " $2}')
+      
+      # Root-Speicher Daten
+      STORAGE_PERCENT=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+      ROOT_STORAGE=$(df -h / | awk 'NR==2 {print $3 " / " $2}')
+      
+      # Filesystem Tabelle generieren (ignoriert temp-Dateisysteme für bessere Übersicht)
+      FS_TABLE=$(df -hT -x tmpfs -x devtmpfs | awk 'NR>1 {print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$5"</td><td>"$7"</td></tr>"}')
+
+      # --- TEMPLATE KOPIEREN UND WERTE ERSETZEN ---
+      cp $TEMPLATE $OUTPUT
+      sed -i "s|\$PUBLIC_IP|$PUBLIC_IP|g" $OUTPUT
+      sed -i "s|\$KERNEL|$KERNEL|g" $OUTPUT
+      sed -i "s|\$HYPERVISOR|$HYPERVISOR|g" $OUTPUT
+      sed -i "s|\$MEMORY_PERCENT|$MEMORY_PERCENT|g" $OUTPUT
+      sed -i "s|\$MEMORY|$MEMORY|g" $OUTPUT
+      sed -i "s|\$STORAGE_PERCENT|$STORAGE_PERCENT|g" $OUTPUT
+      sed -i "s|\$ROOT_STORAGE|$ROOT_STORAGE|g" $OUTPUT
+      sed -i "s|\$FS_TABLE|$FS_TABLE|g" $OUTPUT
+
 runcmd:
-  # Das Skript ausführen, um die index.html zu befüllen
-  - /usr/local/bin/init-dashboard.sh
-  # Nginx aktivieren und starten
+  # 4. Befehle beim Server-Start ausführen
+  # Nginx starten und aktivieren
   - systemctl enable nginx
   - systemctl start nginx
+  # Standard-Nginx Seite entfernen
+  - rm -f /var/www/html/index.nginx-debian.html
+  
+  # Dashboard initial generieren
+  - /usr/local/bin/update-dashboard.sh
+  
+  # Cronjob einrichten, damit das Dashboard jede Minute aktualisiert wird (falls sich Werte ändern)
+  - echo "* * * * * root /usr/local/bin/update-dashboard.sh" > /etc/cron.d/update-dashboard
+  - chmod 0644 /etc/cron.d/update-dashboard
